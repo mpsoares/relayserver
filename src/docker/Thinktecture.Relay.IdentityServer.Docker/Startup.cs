@@ -1,11 +1,13 @@
+using IdentityServer4.Models;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Thinktecture.Relay.IdentityServer.Stores;
 using Thinktecture.Relay.Server.Persistence.EntityFrameworkCore.PostgreSql;
 
-namespace Thinktecture.Relay.Server.Docker
+namespace Thinktecture.Relay.IdentityServer.Docker
 {
 	public class Startup
 	{
@@ -19,8 +21,23 @@ namespace Thinktecture.Relay.Server.Docker
 		// This method gets called by the runtime. Use this method to add services to the container.
 		public void ConfigureServices(IServiceCollection services)
 		{
-			services.AddControllers();
-			services.AddPostgreSqlRelayServerConfigurationDbContext(Configuration.GetConnectionString("PostgreSql"));
+			services.AddControllersWithViews();
+
+			services.AddRelayServerConfigurationDbContext(Configuration.GetConnectionString("PostgreSql"));
+
+			services.AddIdentityServer(c => { })
+				.AddClientStore<RelayServerTenantStore>()
+				.AddDeveloperSigningCredential()
+				.AddInMemoryApiResources(new[]
+				{
+					new ApiResource("RelayServer")
+					{
+						Scopes = new[]
+						{
+							new Scope("relaying"),
+						},
+					},
+				});
 		}
 
 		// This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -30,8 +47,16 @@ namespace Thinktecture.Relay.Server.Docker
 			{
 				app.UseDeveloperExceptionPage();
 			}
-
+			else
+			{
+				app.UseExceptionHandler("/Home/Error");
+				// The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
+				app.UseHsts();
+			}
 			app.UseHttpsRedirection();
+			app.UseStaticFiles();
+
+			app.UseIdentityServer();
 
 			app.UseRouting();
 
@@ -40,7 +65,9 @@ namespace Thinktecture.Relay.Server.Docker
 
 			app.UseEndpoints(endpoints =>
 			{
-				endpoints.MapControllers();
+				endpoints.MapControllerRoute(
+						name: "default",
+						pattern: "{controller=Home}/{action=Index}/{id?}");
 			});
 		}
 	}

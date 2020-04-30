@@ -1,13 +1,11 @@
-using IdentityServer4.Models;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Thinktecture.Relay.IdentityServer.Stores;
 using Thinktecture.Relay.Server.Persistence.EntityFrameworkCore.PostgreSql;
 
-namespace Thinktecture.Relay.IdentityServer.Docker
+namespace Thinktecture.Relay.Server.Docker
 {
 	public class Startup
 	{
@@ -21,23 +19,8 @@ namespace Thinktecture.Relay.IdentityServer.Docker
 		// This method gets called by the runtime. Use this method to add services to the container.
 		public void ConfigureServices(IServiceCollection services)
 		{
-			services.AddControllersWithViews();
-
-			services.AddPostgreSqlRelayServerConfigurationDbContext(Configuration.GetConnectionString("PostgreSql"));
-
-			services.AddIdentityServer(c => { })
-				.AddClientStore<RelayServerTenantStore>()
-				.AddDeveloperSigningCredential()
-				.AddInMemoryApiResources(new[]
-				{
-					new ApiResource("RelayServer")
-					{
-						Scopes = new[]
-						{
-							new Scope("relaying"),
-						},
-					},
-				});
+			services.AddControllers();
+			services.AddRelayServerConfigurationDbContext(Configuration.GetConnectionString("PostgreSql"));
 		}
 
 		// This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -47,16 +30,8 @@ namespace Thinktecture.Relay.IdentityServer.Docker
 			{
 				app.UseDeveloperExceptionPage();
 			}
-			else
-			{
-				app.UseExceptionHandler("/Home/Error");
-				// The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
-				app.UseHsts();
-			}
-			app.UseHttpsRedirection();
-			app.UseStaticFiles();
 
-			app.UseIdentityServer();
+			app.UseHttpsRedirection();
 
 			app.UseRouting();
 
@@ -65,9 +40,7 @@ namespace Thinktecture.Relay.IdentityServer.Docker
 
 			app.UseEndpoints(endpoints =>
 			{
-				endpoints.MapControllerRoute(
-						name: "default",
-						pattern: "{controller=Home}/{action=Index}/{id?}");
+				endpoints.MapControllers();
 			});
 		}
 	}
